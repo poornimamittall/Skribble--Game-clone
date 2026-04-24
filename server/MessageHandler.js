@@ -1,3 +1,4 @@
+const { createGameSession, saveGameResult } = require("./db");
 class MessageHandler {
 constructor(io, rooms) {
 this.io = io;
@@ -32,9 +33,12 @@ socket.emit("room_joined", { roomId, playerId, player: player.toJSON(), players:
 socket.to(roomId).emit("player_joined", { player: player.toJSON(), players: room.getPlayers().map(p => p.toJSON()) });
 }
 handleStartGame(socket, { roomId, playerId }) {
+const { v4: uuidv4 } = require("uuid");
 const room = this.rooms.get(roomId);
 if (!room || room.hostId !== playerId) return;
 if (room.players.size < 2) { socket.emit("error", { message: "Need at least 2 players" }); return; }
+room.sessionId = uuidv4();
+createGameSession(room.sessionId, roomId, room.settings);
 room.game.currentRound = 1;
 room.game.phase = "choosing";
 this.startRound(room);
@@ -58,13 +62,7 @@ room.game.wordOptions = wordOptions;
 room.game.phase = "choosing";
 room.game.currentWord = null;
 room.game.revealedIndices = new Set();
-this.io.to(room.id).emit("round_start", {
-round: room.game.currentRound,
-totalRounds: room.game.rounds,
-drawerId: drawer.id,
-drawerName: drawer.name,
-drawTime: room.game.drawTime
-});
+this.io.to(room.id).emit("round_start", { round: room.game.currentRound, totalRounds: room.game.rounds, drawerId: drawer.id, drawerName: drawer.name, drawTime: room.game.drawTime });
 const drawerSocket = this.getSocket(drawer.socketId);
 if (drawerSocket) drawerSocket.emit("word_options", { words: wordOptions });
 room.game.timer = setTimeout(() => {
@@ -80,21 +78,8 @@ room.game.timeLeft = room.game.drawTime;
 const word = room.game.currentWord;
 const drawer = room.getDrawer();
 const hintWord = room.game.getHintWord(word);
-this.io.to(room.id).emit("game_state", {
-phase: "drawing",
-round: room.game.currentRound,
-totalRounds: room.game.rounds,
-drawerId: drawer ? drawer.id : null,
-hint: hintWord,
-timeLeft: room.game.drawTime,
-wordLength: word.length
-});
-const hintsEnabled = room.game.hints > 0;
-if (hintsEnabled) {
-const hintTimes = [];
-for (let i = 1; i <= room.game.hints; i++) {
-hintTimes.push(Math.floor((room.game.drawTime / (room.game.hints + 1)) * i));
-}
+this.io.to(room.id).emit("game_state", { phase: "drawing", round: room.game.currentRound, totalRounds: room.game.rounds, drawerId: drawer ? drawer.id : null, hint: hintWord, timeLeft: room.game.drawTime, wordLength: word.length });
+if (room.game.hints > 0) {
 let hintCount = 0;
 room.game.hintInterval = setInterval(() => {
 hintCount++;
@@ -134,13 +119,7 @@ const guessersCount = room.getPlayers().filter(p => p.hasGuessed).length;
 const points = Math.max(50, Math.round((room.game.timeLeft / room.game.drawTime) * 100) + (10 - guessersCount) * 5);
 player.addScore(points);
 if (drawer) drawer.addScore(Math.round(points * 0.3));
-this.io.to(room.id).emit("guess_result", {
-correct: true,
-playerId,
-playerName: player.name,
-points,
-players: room.getPlayers().map(p => p.toJSON())
-});
+this.io.to(room.id).emit("guess_result", { correct: true, playerId, playerName: player.name, points, players: room.getPlayers().map(p => p.toJSON()) });
 const nonDrawers = room.getPlayers().filter(p => drawer ? p.id !== drawer.id : true);
 const allGuessed = nonDrawers.every(p => p.hasGuessed);
 if (allGuessed) this.endRound(room, true);
@@ -211,23 +190,22 @@ room.game.clearTimers();
 room.game.phase = "roundEnd";
 const word = room.game.currentWord;
 const players = room.getPlayers();
-this.io.to(room.id).emit("round_end", {
-word,
-players: players.map(p => p.toJSON())
-});
+this.io.to(room.id).emit("round_end", { word, players: players.map(p => p.toJSON()) });
 room.game.currentDrawerIndex++;
-setTimeout(() => {
-this.startRound(room);
-}, 5000);
+setTimeout(() => { this.startRound(room); }, 5000);
 }
 endGame(room) {
 room.game.phase = "gameOver";
 const players = room.getPlayers().sort((a, b) => b.score - a.score);
 const winner = players[0];
-this.io.to(room.id).emit("game_over", {
-winner: winner ? winner.toJSON() : null,
-leaderboard: players.map(p => p.toJSON())
-});
+if (room.sessionId) {
+try {
+saveGameResult(room.sessionId, players);
+} catch (err) {
+console.error("Failed to save game result:", err);
+}
+}
+this.io.to(room.id).emit("game_over", { winner: winner ? winner.toJSON() : null, leaderboard: players.map(p => p.toJSON()) });
 room.game.reset();
 }
 handleDisconnect(socket) {
