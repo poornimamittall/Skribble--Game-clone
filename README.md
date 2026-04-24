@@ -4,7 +4,6 @@ A real-time multiplayer drawing and guessing game — basically Pictionary in a 
 
 Built with React on the front, Node + Socket.IO on the back, and SQLite to keep a running record of game history and player stats.
 
-![Game Flow](https://img.shields.io/badge/status-working-brightgreen)
 
 ---
 
