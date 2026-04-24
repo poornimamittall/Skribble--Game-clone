@@ -1,0 +1,25 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+--bg: #1a1a2e;
+--surface: #16213e;
+--card: #0f3460;
+--accent: #e94560;
+--accent2: #f5a623;
+--green: #4caf50;
+--text: #eaeaea;
+--text-dim: #8892a4;
+--border: #1e3a5f;
+--radius: 12px;
+}
+body { font-family: "Nunito", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+h1, h2, h3 { font-family: "Fredoka One", cursive; }
+button { cursor: pointer; font-family: "Nunito", sans-serif; font-weight: 700; border: none; border-radius: var(--radius); padding: 10px 20px; transition: all 0.2s; }
+button:hover { transform: translateY(-2px); }
+button:active { transform: translateY(0); }
+input { font-family: "Nunito", sans-serif; background: var(--surface); border: 2px solid var(--border); color: var(--text); border-radius: var(--radius); padding: 10px 14px; outline: none; width: 100%; }
+input:focus { border-color: var(--accent); }
+select { font-family: "Nunito", sans-serif; background: var(--surface); border: 2px solid var(--border); color: var(--text); border-radius: var(--radius); padding: 10px 14px; outline: none; }
+select:focus { border-color: var(--accent); }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--card); border-radius: 3px; }
