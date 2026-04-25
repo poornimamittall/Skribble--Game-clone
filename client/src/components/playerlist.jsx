@@ -1,5 +1,5 @@
 import React from "react";
-const EMOJIS = ["🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐨","🐯","🦁","🐮","🐸","🐵","🐔","🦆","🦅","🦉","🦇","🐧"];
+const EMOJIS = ["🐶","🐱","🐭","🐹","🐰","🐙","🐻","🐼","🐨","🐯","🐞","🐮","🐸","🐵","🐔","🐾","🐷","🐈","🙈","🐧"];
 export default function PlayerList({ players, drawerId }) {
 const sorted = [...players].sort((a, b) => b.score - a.score);
 return (
